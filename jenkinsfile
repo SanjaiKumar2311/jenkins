@@ -1,61 +1,81 @@
 pipeline {
-  agent any
+    agent any
 
-  environment {
-    AWS_ACCESS_KEY_ID = credentials('aws-credentials')  // AWS credentials stored in Jenkins
-    AWS_SECRET_ACCESS_KEY = credentials('aws-credentials')
-  }
-
-  stages {
-    stage('Checkout') {
-      steps {
-        git 'https://github.com/SanjaiKumar2311/jenkins.git'  // Your Git repository URL
-      }
+    environment {
+        AWS_ACCESS_KEY_ID = credentials('aws-credentials')  // AWS credentials stored in Jenkins
+        AWS_SECRET_ACCESS_KEY = credentials('aws-credentials')
+        TERRAFORM_VERSION = '1.5.0'  // Define the desired Terraform version
     }
 
-    stage('Terraform Init') {
-      steps {
-        script {
-          sh 'terraform init'  // Initializes the Terraform configuration
+    stages {
+        stage('Checkout') {
+            steps {
+                git 'https://github.com/SanjaiKumar2311/jenkins.git'  // Your Git repository URL
+            }
         }
-      }
-    }
 
-    stage('Terraform Plan') {
-      steps {
-        script {
-          sh 'terraform plan'  // Shows the execution plan
+        stage('Terraform Install') {
+            steps {
+                script {
+                    // Install Terraform if not already available
+                    echo 'Installing Terraform...'
+                    sh '''
+                    if ! command -v terraform &> /dev/null
+                    then
+                        echo "Terraform not found, installing..."
+                        curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo tee /usr/share/keyrings/hashicorp-archive-keyring.gpg
+                        sudo apt update && sudo apt install terraform=${TERRAFORM_VERSION} -y
+                    else
+                        echo "Terraform already installed"
+                    fi
+                    '''
+                }
+            }
         }
-      }
-    }
 
-    stage('Terraform Apply') {
-      steps {
-        script {
-          sh 'terraform apply -auto-approve'  // Apply the changes
+        stage('Terraform Init') {
+            steps {
+                script {
+                    sh 'terraform init'  // Initializes the Terraform configuration
+                }
+            }
         }
-      }
-    }
 
-     stage('Post-deployment Testing') {
-      steps {
-        script {
-          // Capture the public IP from Terraform output
-          def ec2PublicIP = sh(script: 'terraform output -raw ec2_public_ip', returnStdout: true).trim()
-
-          // Test: Check if EC2 instance is accessible (e.g., using curl)
-          sh "curl http://${ec2PublicIP}:80"  // Modify port if necessary
+        stage('Terraform Plan') {
+            steps {
+                script {
+                    sh 'terraform plan'  // Shows the execution plan
+                }
+            }
         }
-      }
-    }
-  }
 
-  post {
-    success {
-      echo 'Pipeline executed successfully!'
+        stage('Terraform Apply') {
+            steps {
+                script {
+                    sh 'terraform apply -auto-approve'  // Apply the changes
+                }
+            }
+        }
+
+        stage('Post-deployment Testing') {
+            steps {
+                script {
+                    // Capture the public IP from Terraform output
+                    def ec2PublicIP = sh(script: 'terraform output -raw ec2_public_ip', returnStdout: true).trim()
+
+                    // Test: Check if EC2 instance is accessible (e.g., using curl)
+                    sh "curl http://${ec2PublicIP}:80"  // Modify port if necessary
+                }
+            }
+        }
     }
-    failure {
-      echo 'Pipeline failed.'
+
+    post {
+        success {
+            echo 'Pipeline executed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed.'
+        }
     }
-  }
 }
