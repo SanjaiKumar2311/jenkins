@@ -3,7 +3,7 @@ provider "aws" {
 }
 
 resource "aws_instance" "example" {
-  ami           = "ami-12345678"  # Replace with the appropriate AWS AMI ID
+  ami           = "ami-0614680123427b75e"  # Replace with the appropriate AWS AMI ID
   instance_type = var.instance_type
 
   tags = {

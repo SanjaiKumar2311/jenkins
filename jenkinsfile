@@ -1,0 +1,58 @@
+pipeline {
+  agent any
+
+  environment {
+    AWS_ACCESS_KEY_ID = credentials('aws-credentials')  // AWS credentials stored in Jenkins
+    AWS_SECRET_ACCESS_KEY = credentials('aws-credentials')
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        git 'https://github.com/SanjaiKumar2311/jenkins.git'  // Your Git repository URL
+      }
+    }
+
+    stage('Terraform Init') {
+      steps {
+        script {
+          sh 'terraform init'  // Initializes the Terraform configuration
+        }
+      }
+    }
+
+    stage('Terraform Plan') {
+      steps {
+        script {
+          sh 'terraform plan'  // Shows the execution plan
+        }
+      }
+    }
+
+    stage('Terraform Apply') {
+      steps {
+        script {
+          sh 'terraform apply -auto-approve'  // Apply the changes
+        }
+      }
+    }
+
+    stage('Post-deployment Testing') {
+      steps {
+        script {
+          // Test: Check if EC2 instance is accessible
+          sh 'curl http://<your-ec2-public-ip>:80'
+        }
+      }
+    }
+  }
+
+  post {
+    success {
+      echo 'Pipeline executed successfully!'
+    }
+    failure {
+      echo 'Pipeline failed.'
+    }
+  }
+}
