@@ -5,6 +5,7 @@ pipeline {
         AWS_ACCESS_KEY_ID = credentials('aws-credentials')  // AWS credentials stored in Jenkins
         AWS_SECRET_ACCESS_KEY = credentials('aws-credentials')
         TERRAFORM_VERSION = '1.5.0'  // Define the desired Terraform version
+        TERRAFORM_PATH = "$HOME/terraform"  // Define Terraform installation directory
     }
 
     stages {
@@ -17,7 +18,6 @@ pipeline {
         stage('Terraform Install') {
             steps {
                 script {
-                    // Install Terraform if not already available (without sudo)
                     echo 'Installing Terraform...'
                     sh '''
                     if ! command -v terraform &> /dev/null
@@ -32,6 +32,8 @@ pipeline {
                         echo "Terraform already installed"
                     fi
                     '''
+                    // Ensure Terraform is installed and available
+                    sh 'terraform version'
                 }
             }
         }
@@ -39,6 +41,8 @@ pipeline {
         stage('Terraform Init') {
             steps {
                 script {
+                    // Ensure Terraform is initialized before any operations
+                    echo 'Initializing Terraform...'
                     sh 'terraform init'  // Initializes the Terraform configuration
                 }
             }
@@ -47,6 +51,8 @@ pipeline {
         stage('Terraform Plan') {
             steps {
                 script {
+                    // Generate an execution plan
+                    echo 'Running Terraform Plan...'
                     sh 'terraform plan'  // Shows the execution plan
                 }
             }
@@ -55,6 +61,8 @@ pipeline {
         stage('Terraform Apply') {
             steps {
                 script {
+                    // Apply the Terraform changes (no approval required)
+                    echo 'Applying Terraform configuration...'
                     sh 'terraform apply -auto-approve'  // Apply the changes
                 }
             }
@@ -67,6 +75,7 @@ pipeline {
                     def ec2PublicIP = sh(script: 'terraform output -raw ec2_public_ip', returnStdout: true).trim()
 
                     // Test: Check if EC2 instance is accessible (e.g., using curl)
+                    echo "Testing access to EC2 instance at http://${ec2PublicIP}:80"
                     sh "curl http://${ec2PublicIP}:80"  // Modify port if necessary
                 }
             }
