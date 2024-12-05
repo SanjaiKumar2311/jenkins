@@ -17,14 +17,17 @@ pipeline {
         stage('Terraform Install') {
             steps {
                 script {
-                    // Install Terraform if not already available
+                    // Install Terraform if not already available (without sudo)
                     echo 'Installing Terraform...'
                     sh '''
                     if ! command -v terraform &> /dev/null
                     then
                         echo "Terraform not found, installing..."
-                        curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo tee /usr/share/keyrings/hashicorp-archive-keyring.gpg
-                        sudo apt update && sudo apt install terraform=${TERRAFORM_VERSION} -y
+                        mkdir -p $HOME/terraform
+                        curl -fsSL https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip -o terraform.zip
+                        unzip terraform.zip -d $HOME/terraform
+                        export PATH=$HOME/terraform:$PATH
+                        echo "Terraform installed"
                     else
                         echo "Terraform already installed"
                     fi
