@@ -37,11 +37,14 @@ pipeline {
       }
     }
 
-    stage('Post-deployment Testing') {
+     stage('Post-deployment Testing') {
       steps {
         script {
-          // Test: Check if EC2 instance is accessible
-          sh 'curl http://<your-ec2-public-ip>:80'
+          // Capture the public IP from Terraform output
+          def ec2PublicIP = sh(script: 'terraform output -raw ec2_public_ip', returnStdout: true).trim()
+
+          // Test: Check if EC2 instance is accessible (e.g., using curl)
+          sh "curl http://${ec2PublicIP}:80"  // Modify port if necessary
         }
       }
     }
